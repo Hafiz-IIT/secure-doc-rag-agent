@@ -1,0 +1,8 @@
+{
+  "query": "gross shipment weight",
+  "allowed_sensitivities": [
+    "normal"
+  ],
+  "min_hits": 2,
+  "expected_output": "evidence packet with source IDs and sufficiency flag"
+}
