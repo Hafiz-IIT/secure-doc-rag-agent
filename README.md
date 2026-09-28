@@ -44,3 +44,8 @@ The current deterministic tests target traceability, sensitive-chunk exclusion a
 
 ## License
 MIT.
+
+## Extended implementation
+
+- `grounded_response.py` — extractive evidence drafts that preserve source/chunk citations and return no answer when the evidence threshold is not met.
+- `tests/test_grounded_response.py` — citation and insufficient-evidence tests.
