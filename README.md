@@ -1,51 +1,52 @@
 # Secure Document RAG Agent
 
-> Traceable document-retrieval prototype with provenance-preserving chunks, sensitivity filters and an explicit evidence gate.
+<p align="center"><strong>Evidence-Grounded Retrieval for Sensitive Documents</strong><br/><sub>Retrieve only what the evidence supports—and preserve where it came from.</sub></p>
 
-## Status
-**Reproducible prototype** with executable Python, tests, and GitHub Actions CI.
+<p align="center"><a href="https://github.com/Hafiz-IIT/secure-doc-rag-agent/actions"><img src="https://img.shields.io/github/actions/workflow/status/Hafiz-IIT/secure-doc-rag-agent/ci.yml?label=CI" alt="CI"/></a> <img src="https://img.shields.io/badge/status-reproducible%20prototype-blue" alt="Prototype"/></p>
 
-## Problem
-Document agents can retrieve sensitive or weakly supported content and then pass it downstream without preserving source provenance or acknowledging insufficient evidence.
+## Research question
 
-## Architecture
-Document chunks + metadata → sensitivity filter → lexical retrieval → ranked hits → provenance-preserving evidence packet → minimum-evidence gate.
+**How can a document agent remain useful without turning weak retrieval into confident unsupported answers?**
 
-## Quick start
-```bash
-python -m unittest discover -s tests -v
-python secure_doc_rag_agent.py
+## Pipeline
+
+```
+Document chunks + metadata
+        ↓
+Sensitivity filter
+        ↓
+Lexical retrieval
+        ↓
+Ranked evidence
+        ↓
+Minimum-evidence gate
+        ↓
+Citation-preserving draft / NO ANSWER
 ```
 
+## Try it
+
+```bash
+python secure_doc_rag_agent.py
+python -m unittest discover -s tests -v
+```
+
+`grounded_response.py` adds a citation-preserving extractive response layer and deliberately returns no answer when the evidence threshold is not met.
+
 ## Implemented
-- Chunk ingestion
-- Source/provenance metadata
-- Sensitivity-aware filtering
-- Token-overlap retrieval
-- Ranked hits
-- Evidence packet construction
-- Minimum-evidence gate
-- Tests and CI
 
-## Research lineage
-- *Privacy-Preserving Architectures for Intelligent Consumer Applications*
-- *The Future of Digital Trust: Secure Data Interactions in User-Centric Platforms*
-- *Human–AI Symbiosis: Toward Next-Generation Consumer Applications*
+- chunk ingestion
+- source/provenance metadata
+- sensitivity-aware filtering
+- token-overlap retrieval
+- ranked hits
+- evidence packets
+- minimum-evidence gate
+- citation-preserving drafts
+- deterministic tests + CI
 
-## Evaluation
-The current deterministic tests target traceability, sensitive-chunk exclusion and minimum-evidence behavior.
+## Boundary
 
-## Limitations
-- Lexical retrieval only
-- No production authentication
-- No encryption-at-rest layer
-- No LLM generation bundled
-- No claim of prompt-injection robustness yet
+This is a controlled retrieval prototype—not a production enterprise RAG platform and not a claim of secure handling of arbitrary confidential data.
 
-## License
-MIT.
-
-## Extended implementation
-
-- `grounded_response.py` — extractive evidence drafts that preserve source/chunk citations and return no answer when the evidence threshold is not met.
-- `tests/test_grounded_response.py` — citation and insufficient-evidence tests.
+Related: [Memory Governor](https://github.com/Hafiz-IIT/memory-governor) · [EXIM Document Truth Bench](https://github.com/Hafiz-IIT/exim-document-truth-bench)
