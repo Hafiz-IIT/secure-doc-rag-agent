@@ -19,11 +19,17 @@ def extractive_draft(
     min_hits: int = 1,
     allowed_sensitivities: tuple[str, ...] = ("normal",),
     max_snippets: int = 3,
+    tenant_id: str = "default",
+    principal_id: str | None = None,
 ) -> GroundedDraft:
+    if not isinstance(max_snippets, int) or isinstance(max_snippets, bool) or max_snippets < 1:
+        raise ValueError("max_snippets must be a positive integer")
     packet = rag.evidence_packet(
         query,
         min_hits=min_hits,
         allowed_sensitivities=allowed_sensitivities,
+        tenant_id=tenant_id,
+        principal_id=principal_id,
     )
     if not packet["sufficient_evidence"]:
         return GroundedDraft(None, (), False)
