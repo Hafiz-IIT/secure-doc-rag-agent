@@ -59,8 +59,11 @@ class SecureDocRAG:
             raise ValueError("principal_id must be non-empty when supplied")
         if not isinstance(top_k, int) or isinstance(top_k, bool) or top_k < 1:
             raise ValueError("top_k must be a positive integer")
-        if not allowed_sensitivities or any(not isinstance(value, str) or not value.strip() for value in allowed_sensitivities):
-            raise ValueError("allowed_sensitivities must contain non-empty labels")
+        if isinstance(allowed_sensitivities, str) or not allowed_sensitivities or any(
+            not isinstance(value, str) or not value.strip()
+            for value in allowed_sensitivities
+        ):
+            raise ValueError("allowed_sensitivities must be a non-empty iterable of labels, not a string")
         q = tokens(query)
         hits: list[RetrievalHit] = []
         for chunk in self._chunks:
