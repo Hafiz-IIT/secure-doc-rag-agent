@@ -8,7 +8,7 @@ def tokens(text: str) -> set[str]:
     if not isinstance(text, str):
         raise ValueError("text must be a string")
     # Unicode-aware tokenization keeps Bengali, Hindi and other scripts searchable.
-    return set(re.findall(r"\\w+", text.casefold(), flags=re.UNICODE))
+    return set(re.findall(r"\w+", text.casefold(), flags=re.UNICODE))
 
 
 @dataclass(frozen=True)
