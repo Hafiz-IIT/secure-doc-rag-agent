@@ -59,6 +59,12 @@ class SecureDocRAGTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             rag.evidence_packet("query", min_hits=0)
 
+    def test_sensitivity_allowlist_must_be_a_collection_not_a_string(self):
+        rag = SecureDocRAG()
+        rag.add(Chunk("x", "doc", "normal text"))
+        with self.assertRaises(ValueError):
+            rag.retrieve("normal", allowed_sensitivities="normal")
+
 
 if __name__ == "__main__":
     unittest.main()
