@@ -42,6 +42,16 @@ class SecureDocRAGTests(unittest.TestCase):
         hits = rag.retrieve("shipment weight", tenant_id="tenant-a", principal_id="user-a")
         self.assertEqual({h.chunk.chunk_id for h in hits}, {"a", "d"})
 
+    def test_minimum_hit_count_can_exceed_default_top_k(self):
+        rag = SecureDocRAG()
+        for i in range(4):
+            rag.add(Chunk(str(i), f"source-{i}", "shared shipment fact",
+                          self.tenant, self.owner))
+        packet = rag.evidence_packet("shipment fact", tenant_id=self.tenant,
+                                     principal_id=self.owner, min_hits=4)
+        self.assertTrue(packet["sufficient_evidence"])
+        self.assertEqual(len(packet["sources"]), 4)
+
     def test_bengali_and_devanagari_tokens_are_supported(self):
         self.assertIn("ওজন", __import__("secure_doc_rag_agent").tokens("মোট ওজন ১২০০ কেজি"))
         self.assertIn("वजन", __import__("secure_doc_rag_agent").tokens("कुल वजन १२०० किलोग्राम"))
