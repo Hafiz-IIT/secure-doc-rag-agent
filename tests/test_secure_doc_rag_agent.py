@@ -33,9 +33,10 @@ class SecureDocRAGTests(unittest.TestCase):
             rag.retrieve(None, tenant_id=self.tenant, principal_id=self.owner)
 
     def test_invalid_sensitivity_filter_rejected(self):
+        rag = SecureDocRAG()
         with self.assertRaises(ValueError):
-            self.rag.retrieve("weight", tenant_id=self.tenant, principal_id=self.owner,
-                              allowed_sensitivities=())
+            rag.retrieve("weight", tenant_id=self.tenant, principal_id=self.owner,
+                         allowed_sensitivities=())
 
     def test_duplicate_chunk_id_within_tenant_is_rejected(self):
         rag = SecureDocRAG()
