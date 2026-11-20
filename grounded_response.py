@@ -30,6 +30,7 @@ def extractive_draft(
         principal_id=principal_id,
         min_hits=min_hits,
         allowed_sensitivities=allowed_sensitivities,
+        top_k=max(max_snippets, min_hits),
     )
     if not packet["sufficient_evidence"]:
         return GroundedDraft(None, (), False)
