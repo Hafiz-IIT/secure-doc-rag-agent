@@ -28,8 +28,9 @@ class SecureDocRAGTests(unittest.TestCase):
     def test_invalid_allowed_readers_and_query_rejected(self):
         with self.assertRaises(ValueError):
             Chunk("x", "doc", "text", self.tenant, self.owner, allowed_readers=(" ",))
+        rag = SecureDocRAG()
         with self.assertRaises(ValueError):
-            self.rag.retrieve(None, tenant_id=self.tenant, principal_id=self.owner)
+            rag.retrieve(None, tenant_id=self.tenant, principal_id=self.owner)
 
     def test_invalid_sensitivity_filter_rejected(self):
         with self.assertRaises(ValueError):
