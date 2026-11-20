@@ -25,6 +25,12 @@ class SecureDocRAGTests(unittest.TestCase):
                             allowed_sensitivities=("normal", "private"))
         self.assertEqual(len(hits), 1)
 
+    def test_duplicate_chunk_id_within_tenant_is_rejected(self):
+        rag = SecureDocRAG()
+        rag.add(Chunk("same", "invoice-a", "weight 1200", self.tenant, self.owner))
+        with self.assertRaises(ValueError):
+            rag.add(Chunk("same", "invoice-b", "weight 1300", self.tenant, self.owner))
+
     def test_minimum_evidence_gate(self):
         rag = SecureDocRAG()
         rag.add(Chunk("a", "one", "shipment delayed", self.tenant, self.owner))
