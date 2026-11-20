@@ -96,12 +96,17 @@ class SecureDocRAG:
         principal_id: str,
         min_hits: int = 1,
         allowed_sensitivities: tuple[str, ...] = ("normal",),
+        top_k: int = 3,
     ) -> dict:
         if isinstance(min_hits, bool) or not isinstance(min_hits, int) or min_hits < 1:
             raise ValueError("min_hits must be a positive integer")
+        if isinstance(top_k, bool) or not isinstance(top_k, int) or top_k < 1:
+            raise ValueError("top_k must be a positive integer")
+        # Retrieve enough candidates to make min_hits attainable.
         hits = self.retrieve(
             query, tenant_id=tenant_id, principal_id=principal_id,
             allowed_sensitivities=allowed_sensitivities,
+            top_k=max(top_k, min_hits),
         )
         return {
             "query": query,
