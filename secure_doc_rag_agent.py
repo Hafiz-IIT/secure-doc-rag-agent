@@ -6,6 +6,8 @@ import unicodedata
 
 def tokens(text: str) -> set[str]:
     """Unicode-aware NFKC/casefold tokenizer retaining letters, marks and numbers."""
+    if not isinstance(text, str):
+        raise ValueError("query/document text must be a string")
     normalized = unicodedata.normalize("NFKC", text).casefold()
     found: set[str] = set()
     current: list[str] = []
@@ -32,6 +34,20 @@ class Chunk:
     provenance: str = "uploaded-document"
     allowed_readers: tuple[str, ...] = ()
 
+    def __post_init__(self):
+        for name, value in (("chunk_id", self.chunk_id), ("source", self.source),
+                            ("text", self.text), ("tenant_id", self.tenant_id),
+                            ("owner_id", self.owner_id), ("sensitivity", self.sensitivity),
+                            ("provenance", self.provenance)):
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(f"{name} must be a non-empty string")
+        if not isinstance(self.allowed_readers, tuple) or any(
+            not isinstance(reader, str) or not reader.strip() for reader in self.allowed_readers
+        ):
+            raise ValueError("allowed_readers must be a tuple of non-empty identities")
+        if len(set(self.allowed_readers)) != len(self.allowed_readers):
+            raise ValueError("allowed_readers must be unique")
+
 
 @dataclass(frozen=True)
 class RetrievalHit:
@@ -44,6 +60,8 @@ class SecureDocRAG:
         self._chunks: list[Chunk] = []
 
     def add(self, chunk: Chunk) -> None:
+        if not isinstance(chunk, Chunk):
+            raise TypeError("chunk must be a Chunk")
         for name, value in (("chunk_id", chunk.chunk_id), ("source", chunk.source),
                             ("text", chunk.text), ("tenant_id", chunk.tenant_id),
                             ("owner_id", chunk.owner_id), ("sensitivity", chunk.sensitivity),
@@ -67,6 +85,10 @@ class SecureDocRAG:
             raise ValueError("tenant_id is required")
         if not isinstance(principal_id, str) or not principal_id.strip():
             raise ValueError("principal_id is required")
+        if not isinstance(allowed_sensitivities, (tuple, list)) or not allowed_sensitivities or any(
+            not isinstance(value, str) or not value.strip() for value in allowed_sensitivities
+        ):
+            raise ValueError("allowed_sensitivities must be a non-empty sequence of labels")
         if isinstance(top_k, bool) or not isinstance(top_k, int) or top_k < 1:
             raise ValueError("top_k must be a positive integer")
         q = tokens(query)
@@ -110,6 +132,8 @@ class SecureDocRAG:
         )
         return {
             "query": query,
+            "tenant_id": tenant_id,
+            "principal_id": principal_id,
             "sufficient_evidence": len(hits) >= min_hits,
             "sources": [
                 {
