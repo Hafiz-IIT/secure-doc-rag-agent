@@ -25,6 +25,17 @@ class SecureDocRAGTests(unittest.TestCase):
                             allowed_sensitivities=("normal", "private"))
         self.assertEqual(len(hits), 1)
 
+    def test_invalid_allowed_readers_and_query_rejected(self):
+        with self.assertRaises(ValueError):
+            Chunk("x", "doc", "text", self.tenant, self.owner, allowed_readers=(" ",))
+        with self.assertRaises(ValueError):
+            self.rag.retrieve(None, tenant_id=self.tenant, principal_id=self.owner)
+
+    def test_invalid_sensitivity_filter_rejected(self):
+        with self.assertRaises(ValueError):
+            self.rag.retrieve("weight", tenant_id=self.tenant, principal_id=self.owner,
+                              allowed_sensitivities=())
+
     def test_duplicate_chunk_id_within_tenant_is_rejected(self):
         rag = SecureDocRAG()
         rag.add(Chunk("same", "invoice-a", "weight 1200", self.tenant, self.owner))
