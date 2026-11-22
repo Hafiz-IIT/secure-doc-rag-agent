@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-import re
+import unicodedata
 
 
 def _require_text(value: str, field: str) -> None:
@@ -11,7 +11,19 @@ def _require_text(value: str, field: str) -> None:
 
 def tokens(text: str) -> set[str]:
     _require_text(text, "text")
-    return set(re.findall(r"\w+", text.casefold(), flags=re.UNICODE))
+    normalized = unicodedata.normalize("NFC", text).casefold()
+    found = []
+    current = []
+    for character in normalized:
+        category = unicodedata.category(character)
+        if category[0] in {"L", "M", "N"} or category == "Pc":
+            current.append(character)
+        elif current:
+            found.append("".join(current))
+            current = []
+    if current:
+        found.append("".join(current))
+    return set(found)
 
 
 @dataclass(frozen=True)
@@ -121,7 +133,6 @@ class SecureDocRAG:
                     "chunk_id": hit.chunk.chunk_id,
                     "source": hit.chunk.source,
                     "provenance": hit.chunk.provenance,
-                    "tenant_id": hit.chunk.tenant_id,
                     "score": round(hit.score, 4),
                     "text": hit.chunk.text,
                 }
