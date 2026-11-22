@@ -1,11 +1,29 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-import re
+import unicodedata
+
+
+def _require_text(value: str, field: str) -> None:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field} must be a non-empty string")
 
 
 def tokens(text: str) -> set[str]:
-    return set(re.findall(r"[a-zA-Z0-9_]+", text.lower()))
+    _require_text(text, "text")
+    normalized = unicodedata.normalize("NFC", text).casefold()
+    found = []
+    current = []
+    for character in normalized:
+        category = unicodedata.category(character)
+        if category[0] in {"L", "M", "N"} or category == "Pc":
+            current.append(character)
+        elif current:
+            found.append("".join(current))
+            current = []
+    if current:
+        found.append("".join(current))
+    return set(found)
 
 
 @dataclass(frozen=True)
@@ -15,6 +33,31 @@ class Chunk:
     text: str
     sensitivity: str = "normal"
     provenance: str = "uploaded-document"
+    tenant_id: str = "default"
+
+    def __post_init__(self):
+        for field in ("chunk_id", "source", "text", "sensitivity", "provenance", "tenant_id"):
+            _require_text(getattr(self, field), field)
+
+
+@dataclass(frozen=True)
+class RetrievalAuthorization:
+    """Authorization context that must be created by a trusted application layer.
+
+    This prototype validates the shape of the context but does not authenticate
+    the principal or issue signed capabilities.
+    """
+    principal_id: str
+    tenant_id: str
+    allowed_sensitivities: tuple[str, ...] = ("normal",)
+
+    def __post_init__(self):
+        _require_text(self.principal_id, "principal_id")
+        _require_text(self.tenant_id, "tenant_id")
+        if not isinstance(self.allowed_sensitivities, tuple):
+            raise ValueError("allowed_sensitivities must be a tuple")
+        if any(not isinstance(value, str) or not value.strip() for value in self.allowed_sensitivities):
+            raise ValueError("allowed_sensitivities must contain non-empty strings")
 
 
 @dataclass(frozen=True)
@@ -28,19 +71,41 @@ class SecureDocRAG:
         self._chunks: list[Chunk] = []
 
     def add(self, chunk: Chunk) -> None:
+        if not isinstance(chunk, Chunk):
+            raise TypeError("chunk must be a Chunk instance")
+        if any(existing.chunk_id == chunk.chunk_id and existing.tenant_id == chunk.tenant_id for existing in self._chunks):
+            raise ValueError(f"duplicate chunk_id within tenant: {chunk.chunk_id}")
         self._chunks.append(chunk)
+
+    @staticmethod
+    def _validate_positive_int(value: int, field: str) -> None:
+        if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+            raise ValueError(f"{field} must be a positive integer")
 
     def retrieve(
         self,
         query: str,
         *,
-        allowed_sensitivities: tuple[str, ...] = ("normal",),
+        authorization: RetrievalAuthorization | None = None,
         top_k: int = 3,
     ) -> list[RetrievalHit]:
+        _require_text(query, "query")
+        self._validate_positive_int(top_k, "top_k")
+        if authorization is None:
+            tenant_id = "default"
+            allowed_sensitivities = ("normal",)
+        else:
+            if not isinstance(authorization, RetrievalAuthorization):
+                raise TypeError("authorization must be a RetrievalAuthorization")
+            tenant_id = authorization.tenant_id
+            allowed_sensitivities = authorization.allowed_sensitivities
+        if not allowed_sensitivities:
+            return []
+
         q = tokens(query)
         hits: list[RetrievalHit] = []
         for chunk in self._chunks:
-            if chunk.sensitivity not in allowed_sensitivities:
+            if chunk.tenant_id != tenant_id or chunk.sensitivity not in allowed_sensitivities:
                 continue
             c = tokens(chunk.text)
             overlap = len(q & c)
@@ -48,28 +113,30 @@ class SecureDocRAG:
                 continue
             score = overlap / max(1, len(q))
             hits.append(RetrievalHit(chunk, score))
-        return sorted(hits, key=lambda h: (-h.score, h.chunk.chunk_id))[:top_k]
+        return sorted(hits, key=lambda hit: (-hit.score, hit.chunk.chunk_id))[:top_k]
 
     def evidence_packet(
         self,
         query: str,
         *,
         min_hits: int = 1,
-        allowed_sensitivities: tuple[str, ...] = ("normal",),
+        authorization: RetrievalAuthorization | None = None,
+        top_k: int = 3,
     ) -> dict:
-        hits = self.retrieve(query, allowed_sensitivities=allowed_sensitivities)
+        self._validate_positive_int(min_hits, "min_hits")
+        hits = self.retrieve(query, authorization=authorization, top_k=top_k)
         return {
             "query": query,
             "sufficient_evidence": len(hits) >= min_hits,
             "sources": [
                 {
-                    "chunk_id": h.chunk.chunk_id,
-                    "source": h.chunk.source,
-                    "provenance": h.chunk.provenance,
-                    "score": round(h.score, 4),
-                    "text": h.chunk.text,
+                    "chunk_id": hit.chunk.chunk_id,
+                    "source": hit.chunk.source,
+                    "provenance": hit.chunk.provenance,
+                    "score": round(hit.score, 4),
+                    "text": hit.chunk.text,
                 }
-                for h in hits
+                for hit in hits
             ],
         }
 

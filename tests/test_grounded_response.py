@@ -1,7 +1,7 @@
 import unittest
 
 from grounded_response import extractive_draft
-from secure_doc_rag_agent import Chunk, SecureDocRAG
+from secure_doc_rag_agent import Chunk, RetrievalAuthorization, SecureDocRAG
 
 
 class GroundedResponseTests(unittest.TestCase):
@@ -19,6 +19,23 @@ class GroundedResponseTests(unittest.TestCase):
         draft = extractive_draft(rag, "shipment delayed", min_hits=2)
         self.assertFalse(draft.sufficient_evidence)
         self.assertIsNone(draft.answer)
+
+    def test_sensitive_draft_requires_explicit_authorization(self):
+        rag = SecureDocRAG()
+        rag.add(Chunk("c1", "private", "passport number 12345", sensitivity="private"))
+        denied = extractive_draft(rag, "passport number")
+        self.assertFalse(denied.sufficient_evidence)
+        allowed = extractive_draft(
+            rag,
+            "passport number",
+            authorization=RetrievalAuthorization("reviewer", "default", ("private",)),
+        )
+        self.assertTrue(allowed.sufficient_evidence)
+
+    def test_max_snippets_must_be_positive(self):
+        rag = SecureDocRAG()
+        with self.assertRaisesRegex(ValueError, "max_snippets"):
+            extractive_draft(rag, "query", max_snippets=0)
 
 
 if __name__ == "__main__":
